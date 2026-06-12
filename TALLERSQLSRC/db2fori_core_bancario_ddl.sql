@@ -56,7 +56,7 @@ CREATE OR REPLACE TABLE CNOFC (
   PRIMARY KEY (codigo_tabla, codigo_registro)
 ) RCDFMT RCNOFC;
 
-LABEL ON TABLE CNOFC IS 'Archivo de Referencias del Sistema o de Datos Comunes.';
+LABEL ON TABLE CNOFC IS 'Archivo referencias del sistema y datos comunes.';
 LABEL ON COLUMN CNOFC (codigo_tabla IS 'Código de la Tabla',
   codigo_registro IS 'Código del Registro',
   descripcion IS 'Descripción de la referencia',
@@ -98,7 +98,7 @@ CREATE OR REPLACE TABLE MLNCT (
   PRIMARY KEY (codigo_banco, codigo_de_notificacion, nivel, idioma, secuencia)
 ) RCDFMT RMLNCT;
 
-LABEL ON TABLE MLNCT IS 'Archivo de patrones/formatos de Notificaciones a Clientes (Usos).';
+LABEL ON TABLE MLNCT IS 'Plantillas de notificaciones a clientes.';
 LABEL ON COLUMN MLNCT (codigo_banco IS 'Banco',
   codigo_de_notificacion IS 'Código de Notificación',
   nivel IS 'Nivel de la notificación',
@@ -143,7 +143,7 @@ CREATE OR REPLACE TABLE MLNOT (
   PRIMARY KEY (codigo_banco, fecha_proceso, numero_cuenta, codigo_de_notificacion, nivel)
 ) RCDFMT RMLNOT;
 
-LABEL ON TABLE MLNOT IS 'Archivo que contiene los datos a imprimir en la notificación (Usos).';
+LABEL ON TABLE MLNOT IS 'Datos para impresión de notificaciones.';
 LABEL ON COLUMN MLNOT (codigo_banco IS 'Banco',
   fecha_proceso IS 'Fecha de proceso',
   numero_cuenta IS 'Número de cuenta',
@@ -384,7 +384,7 @@ CREATE OR REPLACE TABLE RATES (
   PRIMARY KEY (codigo_banco, codigo_moneda)
 ) RCDFMT RRATES;
 
-LABEL ON TABLE RATES IS 'Archivos de Tasas de Cambio (Posición / Contra Valor).';
+LABEL ON TABLE RATES IS 'Tasas de cambio por posición y contra valor.';
 LABEL ON COLUMN RATES (codigo_banco IS 'Código de Banco',
   codigo_moneda IS 'Código de Moneda',
   descripcion IS 'Descripción de la tasa',
@@ -654,7 +654,7 @@ CREATE OR REPLACE TABLE MICRF (
   PRIMARY KEY (tipo_formulario, nombre_reporte, secuencia)
 ) RCDFMT RMICRF;
 
-LABEL ON TABLE MICRF IS 'Archivo que contiene los reportes salvados en Microficha.';
+LABEL ON TABLE MICRF IS 'Reportes salvados en Microficha.';
 LABEL ON COLUMN MICRF (tipo_formulario IS 'Tipo de Formulario',
   nombre_reporte IS 'Nombre del Reporte',
   secuencia IS 'Secuencia',
@@ -730,7 +730,7 @@ CREATE OR REPLACE TABLE IBTBL (
   PRIMARY KEY (id)
 ) RCDFMT RIBTBL;
 
-LABEL ON TABLE IBTBL IS 'Archivo de Referencias Cruzadas para manejo de Intersucursales.';
+LABEL ON TABLE IBTBL IS 'Referencias cruzadas para intersucursales.';
 LABEL ON COLUMN IBTBL (id IS 'Identificador técnico',
   descripcion IS 'Descripción de la referencia cruzada',
   valor_texto IS 'Valor en texto',
@@ -834,7 +834,7 @@ CREATE OR REPLACE TABLE TRDSC (
   PRIMARY KEY (numero_registro_relativo, secuencia)
 ) RCDFMT RTRDSC;
 
-LABEL ON TABLE TRDSC IS 'Descripciones Adicionales a las Transacciones (TRANS).';
+LABEL ON TABLE TRDSC IS 'Descripciones adicionales de transacciones.';
 LABEL ON COLUMN TRDSC (numero_registro_relativo IS 'Número de registro relativo',
   secuencia IS 'Secuencia',
   tipo_descripcion IS 'Tipo de descripción',
@@ -1184,7 +1184,7 @@ CREATE OR REPLACE TABLE CUMAD (
   PRIMARY KEY (id_cliente_operacion, tipo_registro, secuencia)
 ) RCDFMT RCUMAD;
 
-LABEL ON TABLE CUMAD IS 'Archivo de Direcciones de Correo y Beneficiarios de Operaciones/Clientes.';
+LABEL ON TABLE CUMAD IS 'Direcciones de correo y beneficiarios.';
 LABEL ON COLUMN CUMAD (id_cliente_operacion IS 'Número de cliente u operación',
   tipo_registro IS 'Tipo de registro',
   secuencia IS 'Secuencia',
@@ -1233,7 +1233,7 @@ CREATE OR REPLACE TABLE CUMPR (
   PRIMARY KEY (palabra)
 ) RCDFMT RCUMPR;
 
-LABEL ON TABLE CUMPR IS 'Archivo Maestro de Palabras Reservadas que se omiten en Búsqueda de Clientes por String de Caracteres.';
+LABEL ON TABLE CUMPR IS 'Palabras clave omitidas en búsquedas de clientes.';
 LABEL ON COLUMN CUMPR (palabra IS 'Palabra reservada',
   tipo_persona IS 'Tipo de persona',
   tipo_identificacion IS 'Tipo de identificación',
@@ -1280,7 +1280,7 @@ CREATE OR REPLACE TABLE CUMSD (
   PRIMARY KEY (id_cliente)
 ) RCDFMT RCUMSD;
 
-LABEL ON TABLE CUMSD IS 'Archivo Maestro de Clientes para búsqueda de Clientes a través de un String de Caracteres.';
+LABEL ON TABLE CUMSD IS 'Clientes para búsqueda por cadena de caracteres.';
 LABEL ON COLUMN CUMSD (id_cliente IS 'Identificador del cliente',
   tipo_persona IS 'Tipo de persona',
   tipo_identificacion IS 'Tipo de identificación',
@@ -1541,7 +1541,7 @@ CREATE OR REPLACE TABLE OFMST (
   PRIMARY KEY (codigo_banco, codigo_sucursal, numero_cheque)
 ) RCDFMT ROFMST;
 
-LABEL ON TABLE OFMST IS 'Maestro de Cheques Certificados y Cheques de Gerencia.';
+LABEL ON TABLE OFMST IS 'Cheques certificados y gerencia.';
 LABEL ON COLUMN OFMST (codigo_banco IS 'Banco',
   codigo_sucursal IS 'Sucursal',
   numero_cheque IS 'Número de cheque',
@@ -2037,7 +2037,7 @@ CREATE OR REPLACE TABLE CNTRLRTE (
   PRIMARY KEY (codigo_banco, tipo_producto)
 ) RCDFMT RCNTRLRTE;
 
-LABEL ON TABLE CNTRLRTE IS 'Tabla de Tasas y Cargos por Servicio en Cuentas de Detalle.';
+LABEL ON TABLE CNTRLRTE IS 'Tasas y cargos por servicio en cuentas.';
 LABEL ON COLUMN CNTRLRTE (
   codigo_banco IS 'Código de Banco',
   tipo_producto IS 'Tipo de Producto',
@@ -2078,7 +2078,7 @@ CREATE OR REPLACE TABLE CNTRLDEV (
   PRIMARY KEY (codigo_causal)
 ) RCDFMT RCNTRLDEV;
 
-LABEL ON TABLE CNTRLDEV IS 'Definición de las Causales de Devolución de Cheques.';
+LABEL ON TABLE CNTRLDEV IS 'Causales de devolución de cheques.';
 LABEL ON COLUMN CNTRLDEV (
   codigo_causal IS 'Código de Causal',
   fecha_apertura IS 'Fecha de apertura',
@@ -2119,7 +2119,7 @@ CREATE OR REPLACE TABLE DEALS (
   PRIMARY KEY (id)
 ) RCDFMT RDEALS;
 
-LABEL ON TABLE DEALS IS 'Maestro de Préstamos, Certificados, Giros, Valores al Cobro, Inversiones.';
+LABEL ON TABLE DEALS IS 'Préstamos, certificados, giros y valores.';
 LABEL ON COLUMN DEALS (
   id IS 'Identificador técnico',
   fecha_desembolso IS 'Fecha de desembolso',
@@ -2856,7 +2856,7 @@ CREATE OR REPLACE TABLE LCSTA (
   PRIMARY KEY (id)
 ) RCDFMT RLCSTA;
 
-LABEL ON TABLE LCSTA IS 'Estadística de Aperturas, Enmiendas, Pagos en Cartas de Crédito';
+LABEL ON TABLE LCSTA IS 'Aperturas y pagos de cartas de crédito';
 LABEL ON COLUMN LCSTA (
   id IS 'Identificador técnico',
   fecha_emision IS 'Fecha de emisión',
@@ -2942,7 +2942,7 @@ CREATE OR REPLACE TABLE CNTRLRLC (
   PRIMARY KEY (codigo_banco, tipo_producto)
 ) RCDFMT RCNTRLRLC;
 
-LABEL ON TABLE CNTRLRLC IS 'Tabla de Cargos por Servicios o Tarifas de Cartas de Crédito.';
+LABEL ON TABLE CNTRLRLC IS 'Cargos y tarifas de cartas de crédito.';
 LABEL ON COLUMN CNTRLRLC (
   codigo_banco IS 'Código de Banco',
   tipo_producto IS 'Tipo de Producto',
@@ -3107,7 +3107,7 @@ CREATE OR REPLACE TABLE CNTRLRCO (
   PRIMARY KEY (codigo_banco, tipo_producto)
 ) RCDFMT RCNTRLRCO;
 
-LABEL ON TABLE CNTRLRCO IS 'Tabla de Cargos por Servicios o Tarifas de Cobranzas.';
+LABEL ON TABLE CNTRLRCO IS 'Cargos y tarifas de cobranzas.';
 LABEL ON COLUMN CNTRLRCO (
   codigo_banco IS 'Código de Banco',
   tipo_producto IS 'Tipo de Producto',
@@ -3189,7 +3189,7 @@ CREATE OR REPLACE TABLE INPUT (
   PRIMARY KEY (numero_del_lote, secuencia_dentro_del_lote)
 ) RCDFMT RINPUT;
 
-LABEL ON TABLE INPUT IS 'Archivo de Asientos Contables Aprobados (Archivos Derivados).';
+LABEL ON TABLE INPUT IS 'Asientos contables aprobados.';
 LABEL ON COLUMN INPUT (
   numero_del_lote IS 'Número del Lote',
   secuencia_dentro_del_lote IS 'Secuencia dentro del Lote',
@@ -3381,7 +3381,7 @@ CREATE OR REPLACE TABLE INPT2 (
   PRIMARY KEY (id)
 ) RCDFMT RINPT2;
 
-LABEL ON TABLE INPT2 IS 'Entradas Contables Automáticas generadas en el fin de día.';
+LABEL ON TABLE INPT2 IS 'Entradas contables automáticas del fin de día.';
 LABEL ON COLUMN INPT2 (
   id IS 'Identificador técnico',
   descripcion_cuenta IS 'Descripción de la cuenta',
@@ -3665,7 +3665,7 @@ CREATE OR REPLACE TABLE CLSMS (
   PRIMARY KEY (codigo_clase)
 ) RCDFMT RCLSMS;
 
-LABEL ON TABLE CLSMS IS 'Maestro de Clases de Amortizaciones de Activos Fijos';
+LABEL ON TABLE CLSMS IS 'Clases de amortización de activos fijos';
 LABEL ON COLUMN CLSMS (
   codigo_clase IS 'Código de Clase',
   descripcion IS 'Descripción',
@@ -3945,7 +3945,7 @@ CREATE OR REPLACE TABLE BAINP (
   PRIMARY KEY (numero_batch, secuencia)
 ) RCDFMT RBAINP;
 
-LABEL ON TABLE BAINP IS 'Transacciones Contables Diarias de Cuentas por Pagar';
+LABEL ON TABLE BAINP IS 'Transacciones contables de cuentas por pagar';
 LABEL ON COLUMN BAINP (
   numero_batch IS 'Número Batch',
   secuencia IS 'Secuencia',
@@ -4047,7 +4047,7 @@ CREATE OR REPLACE TABLE CNTRLBAF (
   PRIMARY KEY (codigo_banco, codigo_moneda)
 ) RCDFMT RCNTRLBAF;
 
-LABEL ON TABLE CNTRLBAF IS 'Archivo de Control de Cuentas por Pagar (Sección Comisiones).';
+LABEL ON TABLE CNTRLBAF IS 'Control de cuentas por pagar (comisiones).';
 LABEL ON COLUMN CNTRLBAF (
   codigo_banco IS 'Código de Banco',
   codigo_moneda IS 'Código de Moneda',
@@ -4094,7 +4094,7 @@ CREATE OR REPLACE TABLE CNTRLBAP (
   PRIMARY KEY (codigo_banco, codigo_moneda)
 ) RCDFMT RCNTRLBAP;
 
-LABEL ON TABLE CNTRLBAP IS 'Archivo de Control de Cuentas por Pagar (Otros Parámetros).';
+LABEL ON TABLE CNTRLBAP IS 'Control de cuentas por pagar (otros parámetros).';
 LABEL ON COLUMN CNTRLBAP (
   codigo_banco IS 'Código de Banco',
   codigo_moneda IS 'Código de Moneda',
