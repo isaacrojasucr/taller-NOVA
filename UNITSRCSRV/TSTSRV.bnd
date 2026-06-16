@@ -1,0 +1,23 @@
+/*==============================================================================
+  Binder Source        : TSTSRV
+  Descripcion          : Programa de servicio de pruebas unitarias (RPGUnit)
+                          del proceso de conciliacion GLBLN: GLBALCAL
+                          (TSTBALCA), GLCONCIL (TSTCONCI) y GLJSONBL
+                          (TSTJSONB).
+  Modulos enlazados    : TSTBALCA, TSTCONCI, TSTJSONB
+  Hecho por            : Isaac Rojas
+  Fecha                : 2026-06-13
+  Proyecto             : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================*/
+STRPGMEXP PGMLVL(*CURRENT) SIGNATURE('TSTSRV')
+
+  /* TSTBALCA - pruebas de GLBALCAL.GLBALCUL */
+  EXPORT SYMBOL('TSTBCRUN')
+
+  /* TSTCONCI - pruebas de GLCONCIL */
+  EXPORT SYMBOL('TSTCCRUN')
+
+  /* TSTJSONB - pruebas de GLJSONBL */
+  EXPORT SYMBOL('TSTJBRUN')
+
+ENDPGMEXP

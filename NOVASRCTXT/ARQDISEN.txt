@@ -1,0 +1,132 @@
+==============================================================================
+Archivo               : ARQDISEN.txt
+Descripcion           : Arquitectura de componentes y flujo batch del proceso
+                         de conciliacion GLBLN (GLCNC001).
+Hecho por             : Isaac Rojas
+Fecha                 : 2026-06-13
+Proyecto              : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================
+
+1. CAPAS Y COMPONENTES
+------------------------
+
+  ORQUESTACION
+    GLCNC001 (programa principal, *NEW activation group, BNDDIR GLCNCBND)
+      |
+      | invoca, en orden, a traves de prototipos EXTPROC resueltos por
+      | el directorio de enlace
+      v
+  +-------------------+   +-------------------+   +-------------------+   +-------------------+
+  |  GLUTLSRV (utiles)|   |  GLDATSRV (datos) |   |  GLBUSSRV (negocio)|   |  GLOUTSRV (salida)|
+  |-------------------|   |-------------------|   |-------------------|   |-------------------|
+  | UTLFECHA          |   | GLDTAACC          |   | GLBALCAL          |   | GLJSONBL          |
+  |  UTLFMTFEC        |   |  GLACCINI         |   |  GLBALCUL         |   |  GLJSNINI         |
+  |  UTLFMTTS         |   |  GLACCNEXT        |   |                   |   |  GLJSNMETA        |
+  |  UTLANIO          |   |  GLACCFIN         |   | GLCONCIL          |   |  GLJSNEJEC        |
+  |  UTLMES           |   |                   |   |  GLCONTINI        |   |  GLJSNCTX         |
+  |                   |   | GLMOVACC          |   |  GLCONINI         |   |  GLJSNPINI        |
+  | UTLNUM            |   |  GLMOVTOT         |   |  GLCONPART        |   |  GLJSNPART        |
+  |  UTLRND2          |   |  GLMOVTCNT        |   |  GLCONDIF         |   |  GLJSNCTA         |
+  |  UTLDIFABS        |   |  GLMOVPINI        |   |  GLCONTOT         |   |  GLJSNCCNT/CGET   |
+  |  UTLEXCTOL        |   |  GLMOVPNXT        |   |  GLCONTGET        |   |  GLJSNINC         |
+  |                   |   |  GLMOVPFIN        |   |                   |   |  GLJSNICNT/IGET   |
+  | UTLBITAC          |   |                   |   |                   |   |  GLJSNCTOT        |
+  |  UTLBITINI        |   |                   |   |                   |   |  GLJSNHASH        |
+  |  UTLBITADD        |   |                   |   |                   |   |                   |
+  |  UTLBITCNT/GET    |   |                   |   |                   |   | GLIFSOUT          |
+  |  UTLBITMAX        |   |                   |   |                   |   |  GLIFSINI         |
+  |  UTLBITESC        |   |                   |   |                   |   |  GLIFSWRT         |
+  +-------------------+   +-------------------+   +-------------------+   +-------------------+
+           ^                        ^                        ^                        ^
+           |                        |                        |                        |
+           +------------------------+------------------------+------------------------+
+                                      |
+                              SQL embebido (Db2 for i)
+                              GLBLNVW, TRANS, TTRAN, TRDSC, SYSIBM.SYSDUMMY1
+
+  PERSISTENCIA (NOVASRCSQL)
+    GLBLNVW (vista: GLBLN + GLMST + CCDSC) -> consultada por GLDTAACC
+    TRANS / TTRAN / TRDSC                  -> consultadas por GLMOVACC
+    SYSIBM.SYSDUMMY1 (HASH_SHA256)         -> consultada por GLJSNHASH
+
+2. PRINCIPIOS SOLID APLICADOS
+--------------------------------
+- SRP: cada modulo tiene una unica responsabilidad (acceso a datos,
+  calculo de balance, clasificacion de conciliacion, formateo JSON,
+  I/O en IFS, utilidades de fecha/numero/bitacora).
+- OCP: las reglas de clasificacion (CONCILIADA/PARCIAL/NO_CONCILIADA,
+  severidades, tolerancia) estan aisladas en GLCONCIL; pueden evolucionar
+  sin modificar GLCNC001, GLDATSRV ni GLOUTSRV.
+- LSP/ISP: cada programa de servicio expone un contrato (.bnd) acotado a
+  su capa; GLCNC001 solo conoce los procedimientos que necesita de cada
+  capa (4 binder sources independientes en lugar de uno monolitico).
+- DIP: GLBUSSRV (negocio) no contiene SQL ni conoce GLBLNVW/TRANS/TTRAN;
+  recibe los datos ya leidos por GLDATSRV a traves de parametros. GLCNC001
+  depende de las abstracciones (prototipos EXTPROC) de las 4 capas, no de
+  su implementacion.
+
+3. FLUJO BATCH DE GLCNC001
+------------------------------
+
+  1. Inicializacion
+     - wTsIni = %timestamp(); wIdEjec = 'GLCNC' + timestamp ISO sin '-'/'.'
+     - wAnio/wMes = UTLANIO/UTLMES(pFchProc)
+     - UTLBITINI() / GLJSNINI() / GLCONTINI()  -> limpia acumuladores en
+       memoria de la ejecucion anterior (estado modulo-estatico).
+
+  2. Recorrido de cuentas (RF-01) -- GLACCINI / dow GLACCNEXT / GLACCFIN
+     Por cada cuenta devuelta por GLBLNVW (filtrada por banco/sucursal/
+     moneda/rango de cuenta), dentro de un bloque MONITOR/ON-ERROR:
+
+       a. GLMOVTOT       -> debitos/creditos/cantidad/primer-ultimo mov.
+                             del periodo (TRANS) (RF-02)
+       b. GLBALCUL       -> saldoInicial y saldoFinalCalculado (RF-02)
+       c. GLCONINI / GLJSNPINI / GLMOVPINI
+          dow GLMOVPNXT  -> por cada partida pendiente (TTRAN/TRDSC):
+            GLCONPART    -> clasifica signo/tipo/estado, acumula
+                             diferencia neta de partidas
+            GLJSNPART    -> construye y acumula el fragmento JSON de la
+                             partida
+          GLMOVPFIN
+       d. GLCONDIF       -> saldoConciliado, diferencias, codigo/severidad
+                             /requiereRevision (RF-03)
+       e. GLCONTOT       -> acumula control de totales de la ejecucion
+                             (RF-04)
+       f. GLMOVTCNT      -> conteo de registros fuente (trazabilidad)
+       g. wHashIn / GLJSNHASH -> hashCuenta (trazabilidad, RF-07)
+       h. GLJSNCTA       -> construye el fragmento JSON completo de la
+                             cuenta y lo acumula (g_cta)
+       i. Si codEstado = NO_CONCILIADA o PARCIAL: UTLBITADD + GLJSNINC
+          registran un incidente (RF-08)
+
+       ON-ERROR: UTLBITADD + GLJSNINC con codigo ERR-GL-999/CRITICA,
+       incluyendo SQLSTT; el proceso continua con la siguiente cuenta
+       (aislamiento de errores por cuenta, RF-08).
+
+  3. Cierre de la ejecucion
+     - wTsFin = %timestamp()
+     - wEstadoEj derivado de UTLBITMAX(): CRITICA->ERROR, ALTA->PARCIAL,
+       en otro caso->FINALIZADO (ver ESTADOSC.txt)
+     - GLCONTGET -> totales finales (RF-04)
+
+  4. Ensamblado y publicacion del JSON en IFS (RF-05/RF-06)
+     - GLIFSINI(pRutaJson) crea/trunca el archivo
+     - Escritura secuencial (GLIFSWRT) en el orden del documento:
+       metadata, ejecucion, contexto, cuentas[] (iterando GLJSNCCNT/
+       GLJSNCGET), controlTotales, incidentes[] (iterando GLJSNICNT/
+       GLJSNIGET)
+     - Arquitectura de dos pasadas: los fragmentos de "cuentas" e
+       "incidentes" se acumulan en memoria (GLJSONBL) durante el paso 2
+       y se escriben aqui, despues de conocer fechaHoraFin/
+       estadoEjecucion/controlTotales (que el JSON requiere ANTES del
+       arreglo "cuentas").
+
+  5. Bitacora de ejecucion (RF-07) -- UTLBITESC(pRutaBitac, ...)
+     Ver BITACORA.txt para el formato exacto.
+
+4. TRAZABILIDAD
+------------------
+idEjecucion (GLCNC<timestamp>) es el identificador comun entre el JSON
+("ejecucion".idEjecucion) y la bitacora .txt (linea idEjecucion), y debe
+formar parte del nombre/ruta de ambos archivos en IFS (definido por el
+llamador via pRutaJson/pRutaBitac, ver PARAMEXE.txt).

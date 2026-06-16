@@ -1,0 +1,24 @@
+/*==============================================================================
+  Binder Source        : GLBUSSRV
+  Descripcion          : Programa de servicio de reglas de negocio (calculo
+                          de balance y conciliacion) para el proceso de
+                          conciliacion GLBLN.
+  Modulos enlazados    : GLBALCAL, GLCONCIL
+  Hecho por            : Isaac Rojas
+  Fecha                : 2026-06-13
+  Proyecto             : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================*/
+STRPGMEXP PGMLVL(*CURRENT) SIGNATURE('GLBUSSRV')
+
+  /* GLBALCAL - calculo de balance (saldo inicial / saldo final calculado) */
+  EXPORT SYMBOL('GLBALCUL')
+
+  /* GLCONCIL - partidas conciliatorias, diferencias, estado y control de totales */
+  EXPORT SYMBOL('GLCONTINI')
+  EXPORT SYMBOL('GLCONINI')
+  EXPORT SYMBOL('GLCONPART')
+  EXPORT SYMBOL('GLCONDIF')
+  EXPORT SYMBOL('GLCONTOT')
+  EXPORT SYMBOL('GLCONTGET')
+
+ENDPGMEXP

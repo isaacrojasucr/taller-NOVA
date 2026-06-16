@@ -1,0 +1,4 @@
+system "db2 \"values timestamp(''2026-06-12-00.00.00'')\""
+system "db2 \"values timestamp(''2026-06-12 00:00:00'')\""
+system "db2 \"values decimal(123.45,15,2)\""
+system "db2 \"values decimal('1250.50',15,2)\""

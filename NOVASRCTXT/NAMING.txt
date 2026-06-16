@@ -1,0 +1,105 @@
+==============================================================================
+Archivo               : NAMING.txt
+Descripcion           : Convencion de nombres de objetos, modulos, programas
+                         y procedimientos del proceso de conciliacion GLBLN.
+Hecho por             : Isaac Rojas
+Fecha                 : 2026-06-13
+Proyecto              : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================
+
+1. LIMITE DE NOMBRES (PUB400 / IBM i)
+-------------------------------------
+Todos los objetos (tablas, vistas, modulos, programas, programas de
+servicio, directorios de enlace) respetan el limite de 10 caracteres
+de los nombres de objeto *OBJ del sistema IBM i. Ningun nombre usado en
+este taller supera ese limite.
+
+2. PREFIJOS
+------------
+GL  - Componentes del dominio "General Ledger / Conciliacion GLBLN":
+      datos (GLDTAACC, GLMOVACC), negocio (GLBALCAL, GLCONCIL), salida
+      (GLJSONBL, GLIFSOUT), orquestacion (GLCNC001) y tablas del nucleo
+      funcional (GLMST, GLBLN, GLBLNVW).
+
+UTL - Utilidades transversales, reutilizables por cualquier proceso
+      (UTLFECHA, UTLNUM, UTLBITAC), agrupadas en el programa de servicio
+      GLUTLSRV.
+
+TST - Modulos de pruebas unitarias estilo RPGUnit (TSTBALCA, TSTCONCI,
+      TSTJSONB), agrupados en el programa de servicio TSTSRV. Cada modulo
+      cubre las reglas de un modulo de negocio/salida homonimo (TST + 4
+      primeras letras significativas del modulo bajo prueba).
+
+3. PROGRAMAS DE SERVICIO (.bnd)
+---------------------------------
+Sufijo SRV agrupando modulos por capa (Interface Segregation):
+
+  GLUTLSRV  - UTLFECHA, UTLNUM, UTLBITAC      (utilidades)
+  GLDATSRV  - GLDTAACC, GLMOVACC              (acceso a datos)
+  GLBUSSRV  - GLBALCAL, GLCONCIL              (reglas de negocio)
+  GLOUTSRV  - GLJSONBL, GLIFSOUT              (construccion/publicacion JSON)
+  TSTSRV    - TSTBALCA, TSTCONCI, TSTJSONB    (pruebas unitarias)
+
+4. DIRECTORIO DE ENLACE (Binding Directory)
+---------------------------------------------
+GLCNCBND agrupa GLUTLSRV/GLDATSRV/GLBUSSRV/GLOUTSRV y es referenciado por
+GLCNC001 via CTL-OPT BNDDIR('GLCNCBND'). Ver DEPLOY.txt para el detalle de
+creacion (CRTBNDDIR + ADDBNDDIRE).
+
+5. PROCEDIMIENTOS EXPORTADOS
+------------------------------
+Cada procedimiento exportado usa como prefijo el nombre del modulo (sin
+el sufijo numerico, cuando aplica) seguido de un sufijo que describe su
+rol:
+
+  *INI   - reinicia acumuladores/estado en memoria del modulo
+           (UTLBITINI, GLCONTINI, GLCONINI, GLJSNINI, GLJSNPINI,
+            GLACCINI, GLMOVPINI, GLIFSINI)
+  *NEXT / *NXT - avanza un cursor (GLACCNEXT, GLMOVPNXT)
+  *FIN   - cierra un cursor (GLACCFIN, GLMOVPFIN)
+  *ADD   - agrega un elemento a un acumulador (UTLBITADD)
+  *CNT   - devuelve un conteo de elementos acumulados (UTLBITCNT,
+            GLJSNCCNT, GLJSNICNT)
+  *GET   - recupera un elemento acumulado por indice (UTLBITGET,
+            GLJSNCGET, GLJSNIGET, GLCONTGET)
+  *MAX   - devuelve el valor maximo de severidad (UTLBITMAX)
+  *ESC   - escribe un archivo de bitacora/log en IFS (UTLBITESC)
+  *WRT   - escribe un fragmento de texto en IFS (GLIFSWRT)
+  *TOT   - acumula totales (GLCONTOT) o construye el fragmento JSON de
+           totales (GLJSNCTOT)
+  *DIF   - calcula diferencias y clasifica el estado de conciliacion
+           (GLCONDIF)
+  *CUL   - calcula (GLBALCUL)
+  *PART  - clasifica/construye una partida conciliatoria (GLCONPART,
+           GLJSNPART)
+  *META/*EJEC/*CTX/*CTA/*INC - construyen los fragmentos JSON homonimos
+           del documento de conciliacion (GLJSNMETA, GLJSNEJEC, GLJSNCTX,
+           GLJSNCTA, GLJSNINC)
+  *HASH  - calcula un hash de trazabilidad (GLJSNHASH)
+  *BOOL/*ESC (privados de GLJSONBL) - helpers internos de formateo JSON
+           (no exportados)
+
+6. DECISION DE COMPILACION: .rpgle vs CRTSQLRPGI
+---------------------------------------------------
+Algunos modulos contienen SQL embebido (GLDTAACC, GLMOVACC, GLJSONBL
+[GLJSNHASH], GLIFSOUT [GLIFSINI/GLIFSWRT], GLCNC001) y otros son RPG puro
+(UTLFECHA, UTLNUM, UTLBITAC, GLBALCAL, GLCONCIL, TSTBALCA, TSTCONCI,
+TSTJSONB). Para evitar mantener dos comandos de compilacion distintos
+segun el contenido de cada modulo, y para permitir agregar SQL embebido
+a futuro sin renombrar archivos ni cambiar el script de despliegue, TODOS
+los modulos .rpgle y .sqlrpgle de este taller se compilan con
+CRTSQLRPGI (precompilador SQL), independientemente de si contienen o no
+sentencias EXEC SQL. CRTSQLRPGI es un superconjunto de CRTRPGMOD para
+fuentes sin SQL embebido. Esta decision se documenta en detalle en
+DEPLOY.txt.
+
+7. NOMBRES DE ARCHIVOS GENERADOS EN IFS
+-------------------------------------------
+Ver BITACORA.txt para el formato del archivo de bitacora y PARAMEXE.txt
+para los parametros de ruta (pRutaJson/pRutaBitac) que recibe GLCNC001.
+El identificador de ejecucion (idEjecucion) usado para nombrar/trazar
+ambos archivos sigue el patron:
+
+  GLCNC<timestamp ISO sin '-' ni '.'>   (25 caracteres, ej. GLCNC20260613143025123456)
+
+generado en GLCNC001 a partir de %timestamp() al inicio de la ejecucion.

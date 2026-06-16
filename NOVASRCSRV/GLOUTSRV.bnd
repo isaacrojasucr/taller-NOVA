@@ -1,0 +1,33 @@
+/*==============================================================================
+  Binder Source        : GLOUTSRV
+  Descripcion          : Programa de servicio de construccion y publicacion
+                          de la salida (documento JSON de conciliacion en
+                          IFS) para el proceso de conciliacion GLBLN.
+  Modulos enlazados    : GLJSONBL, GLIFSOUT
+  Hecho por            : Isaac Rojas
+  Fecha                : 2026-06-13
+  Proyecto             : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================*/
+STRPGMEXP PGMLVL(*CURRENT) SIGNATURE('GLOUTSRV')
+
+  /* GLJSONBL - construccion de fragmentos JSON del documento de conciliacion */
+  EXPORT SYMBOL('GLJSNINI')
+  EXPORT SYMBOL('GLJSNMETA')
+  EXPORT SYMBOL('GLJSNEJEC')
+  EXPORT SYMBOL('GLJSNCTX')
+  EXPORT SYMBOL('GLJSNPINI')
+  EXPORT SYMBOL('GLJSNPART')
+  EXPORT SYMBOL('GLJSNCTA')
+  EXPORT SYMBOL('GLJSNCCNT')
+  EXPORT SYMBOL('GLJSNCGET')
+  EXPORT SYMBOL('GLJSNINC')
+  EXPORT SYMBOL('GLJSNICNT')
+  EXPORT SYMBOL('GLJSNIGET')
+  EXPORT SYMBOL('GLJSNCTOT')
+  EXPORT SYMBOL('GLJSNHASH')
+
+  /* GLIFSOUT - publicacion del documento JSON en IFS */
+  EXPORT SYMBOL('GLIFSINI')
+  EXPORT SYMBOL('GLIFSWRT')
+
+ENDPGMEXP

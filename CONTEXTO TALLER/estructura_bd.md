@@ -2240,7 +2240,7 @@ Descripcion: Maestro de Cuentas Contables.
 | updated_at | TIMESTAMP | - | NO | NO | - |
 
 Indices sugeridos:
-- `idx_glmst_pk`: (codigo_banco, codigo_moneda)
+- `idx_glmst_pk`: (codigo_banco, codigo_moneda, cuenta_contable)
 - `idx_glmst_created_at`: (created_at)
 
 #### INPUT
@@ -2290,7 +2290,7 @@ Descripcion: Balances Generales
 | updated_at | TIMESTAMP | - | NO | NO | - |
 
 Indices sugeridos:
-- `idx_glbln_pk`: (codigo_banco, codigo_sucursal)
+- `idx_glbln_pk`: (codigo_banco, codigo_sucursal, codigo_moneda, cuenta_contable)
 - `idx_glbln_created_at`: (created_at)
 
 #### GLBSE

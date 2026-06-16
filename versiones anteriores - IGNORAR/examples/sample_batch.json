@@ -1,0 +1,9 @@
+{
+  "metadata": { "generatedAt": "2026-06-12T10:05:00", "schema": "contabilidad.v1" },
+  "ejecucion": { "lote": "L20260611_01", "banco": "B001" },
+  "cuentas": [
+    { "cuentaContable": "100-001-0001", "saldoDebitos": 1250.50, "saldoCreditos": 300.00, "saldoNeto": 950.50 },
+    { "cuentaContable": "200-010-0050", "saldoDebitos": 0.00, "saldoCreditos": 500.00, "saldoNeto": -500.00 }
+  ],
+  "controlTotales": { "sumatoriaDebitos": 1250.50, "sumatoriaCreditos": 800.00, "sumatoriaDiferenciaNeta": 450.50 }
+}

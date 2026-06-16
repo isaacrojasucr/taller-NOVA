@@ -1,0 +1,199 @@
+==============================================================================
+Archivo               : DEPLOY.txt
+Descripcion           : Guia de compilacion y despliegue del proceso de
+                         conciliacion GLBLN en PUB400.com, libreria
+                         IROJAS941.
+Hecho por             : Isaac Rojas
+Fecha                 : 2026-06-13
+Proyecto              : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================
+
+PRERREQUISITOS
+-----------------
+- Libreria de trabajo: IROJAS941 (CRTLIB IROJAS941 si no existe).
+- CURLIB(IROJAS941) y/o *LIBL incluye IROJAS941 antes de compilar.
+- PTF de Db2 for i con soporte para HASH_SHA256 (ver seccion 5).
+
+FASE A - BASE DE DATOS (115 objetos SQL, NOVASRCSQL/)
+----------------------------------------------------------
+Ejecutar cada .sql con RUNSQLSTM (o STRSQL / Run SQL Scripts) en el orden
+indicado, respetando las dependencias de FK (CONSTRAINT). Todos los
+objetos son CREATE OR REPLACE TABLE/VIEW; volver a ejecutar un script no
+falla si el objeto ya existe.
+
+  RUNSQLSTM SRCSTMF('/ruta/NOVASRCSQL/<archivo>.sql') COMMIT(*NONE)
+
+A.1 - Nucleo funcional (consultado por GLCNC001), 7 objetos:
+  1. CCDSC.sql      2. GLMST.sql      3. GLBLN.sql
+  4. TRANS.sql      5. TRDSC.sql      6. TTRAN.sql
+  7. GLBLNVW.sql  (vista: GLBLN + GLMST + CCDSC)
+
+A.2 - Resto del esquema (108 objetos, completitud DBA, por modulo):
+
+  Modulo 1 - Archivos Comunes (24, TRANS/TRDSC/TTRAN ya creadas en A.1):
+    CNOFT, CNOFC, MLNCT, MLNOT, HSNOT, HEAD, MSSGS, HOLYD, APCLS, RATES,
+    RTRNS, HLHIS, PRENA, PRENS, UT500, UT510, MICRF, IBSDD, IBTBL, CIFXF,
+    CNTRLCNT, CNTRLBRN, CNTRLNUM, CNTRLTAX
+
+  Modulo 2 - Clientes (5):
+    CUMST, CUMAD, CUMPR, CUMSD, SPINS
+    (CUMST primero: referenciada por CUMAD/CUMSD)
+
+  Modulo 3 - Cuentas de Detalle/Chequeras (18):
+    ACMST, STPMT, UNCOL, PBTRN, OFMST, RCLNB, TLMST, TDRCR, AUDIT, CHMST,
+    CHPER, CHSTS, DEVOL, CMRIN, OVDRF, CNTRLMSG, CNTRLRTE, CNTRLDEV
+    (ACMST primero: referenciada por STPMT/UNCOL/PBTRN/RCLNB/CHMST/CHSTS/
+     CMRIN; CHMST antes de CHPER)
+
+  Modulo 4 - Contratos/Certificados/Giros/Valores (9):
+    DEALS, DLPMT, DLDRF, DLSDE, DLCLP, DDCPN, DLITP, CDRTE, CNTRLDLS
+    (DEALS primero: referenciada por DLPMT/DLDRF/DLSDE/DDCPN/DLITP)
+
+  Modulo 5 - Cartas de Credito (10):
+    LCMST, LCDOC, LCFIN, LCFMT, LCADM, LCCOV, LCDIN, LCSTA, CNTRLLCP,
+    CNTRLRLC
+    (LCMST primero: referenciada por LCDOC/LCADM/LCCOV/LCDIN)
+
+  Modulo 6 - Cobranzas (4):
+    DCMST, APPRV, LCFEE, CNTRLRCO
+    (APPRV/LCFEE dependen de LCMST, ya creada en modulo 5)
+
+  Modulo 7 - Contabilidad (6 adicionales; GLMST/CCDSC/GLBLN ya en A.1):
+    INPUT, GLBSE, GLFIN, INPT2, NXINP, BUMST
+
+  Modulo 8 - Garantias (2):
+    ROCOL, RCOLL
+    (ROCOL primero)
+
+  Modulo 9 - Lineas de Credito (1):
+    LNECR  (FK -> CUMST, ya creada en modulo 2)
+
+  Modulo 10 - Activos Fijos (4):
+    CLSMS, LOCMS, FIXMS, CNTRLFIX
+    (EXCEPCION DE ORDEN: CLSMS y LOCMS antes de FIXMS, por sus FK)
+
+  Modulo 11 - Proveedores y Cuentas por Pagar (7):
+    BAVEN, BAPRC, BAMOR, BAINP, BAHIS, CNTRLBAF, CNTRLBAP
+    (BAVEN primero: referenciada por BAPRC)
+
+  Modulo 12 - Pagos y Transferencias (6):
+    FIWRT, POFED, POSWF, POTLX, SWITF, CNTRLPRF
+    (sin dependencias entre si)
+
+  Modulo 13 - Propuesta de Credito (9):
+    PLPCR, PLPRD, PLGRT, DPMST, DPDTL, IFMST, IFDTL, DPGLN, LIMST
+    (PLPCR antes de PLPRD/PLGRT; DPMST antes de DPDTL; IFMST antes de
+     IFDTL; todas con FK -> CUMST ya creada en modulo 2)
+
+  Modulo 14 - Manejo de Documentos (2):
+    DITBL, DIMST
+    (EXCEPCION DE ORDEN: DITBL antes de DIMST, por su FK)
+
+  Modulo 15 - Seguridad (1):
+    USERS
+
+Verificacion A: las 114 CREATE OR REPLACE TABLE y la CREATE OR REPLACE
+VIEW GLBLNVW terminan sin error. Cargar datos de prueba minimos solo en
+GLBLN, GLMST, CCDSC, TRANS, TTRAN, TRDSC (nucleo funcional); las 108
+tablas restantes solo requieren validacion estructural.
+
+FASE B - UTILIDADES TRANSVERSALES (GLUTLSRV)
+-------------------------------------------------
+  CRTSQLRPGI OBJ(IROJAS941/UTLFECHA) SRCSTMF('/ruta/NOVASRCMOD/UTLFECHA.rpgle') OBJTYPE(*MODULE)
+  CRTSQLRPGI OBJ(IROJAS941/UTLNUM)   SRCSTMF('/ruta/NOVASRCMOD/UTLNUM.rpgle')   OBJTYPE(*MODULE)
+  CRTSQLRPGI OBJ(IROJAS941/UTLBITAC) SRCSTMF('/ruta/NOVASRCMOD/UTLBITAC.rpgle') OBJTYPE(*MODULE)
+
+  CRTSRVPGM SRVPGM(IROJAS941/GLUTLSRV) MODULE(IROJAS941/UTLFECHA
+    IROJAS941/UTLNUM IROJAS941/UTLBITAC)
+    SRCSTMF('/ruta/NOVASRCSRV/GLUTLSRV.bnd') EXPORT(*SRCFILE)
+
+FASE C - ACCESO A DATOS (GLDATSRV, depende de A.1)
+--------------------------------------------------------
+  CRTSQLRPGI OBJ(IROJAS941/GLDTAACC) SRCSTMF('/ruta/NOVASRCMOD/GLDTAACC.rpgle') OBJTYPE(*MODULE)
+  CRTSQLRPGI OBJ(IROJAS941/GLMOVACC) SRCSTMF('/ruta/NOVASRCMOD/GLMOVACC.rpgle') OBJTYPE(*MODULE)
+
+  CRTSRVPGM SRVPGM(IROJAS941/GLDATSRV) MODULE(IROJAS941/GLDTAACC
+    IROJAS941/GLMOVACC)
+    SRCSTMF('/ruta/NOVASRCSRV/GLDATSRV.bnd') EXPORT(*SRCFILE)
+
+FASE D - NEGOCIO (GLBUSSRV, depende de B y C)
+---------------------------------------------------
+  CRTSQLRPGI OBJ(IROJAS941/GLBALCAL) SRCSTMF('/ruta/NOVASRCMOD/GLBALCAL.rpgle') OBJTYPE(*MODULE)
+  CRTSQLRPGI OBJ(IROJAS941/GLCONCIL) SRCSTMF('/ruta/NOVASRCMOD/GLCONCIL.rpgle') OBJTYPE(*MODULE)
+
+  CRTSRVPGM SRVPGM(IROJAS941/GLBUSSRV) MODULE(IROJAS941/GLBALCAL
+    IROJAS941/GLCONCIL)
+    SRCSTMF('/ruta/NOVASRCSRV/GLBUSSRV.bnd') EXPORT(*SRCFILE)
+
+FASE E - SALIDA JSON/IFS (GLOUTSRV, depende de B)
+---------------------------------------------------
+  CRTSQLRPGI OBJ(IROJAS941/GLJSONBL) SRCSTMF('/ruta/NOVASRCMOD/GLJSONBL.rpgle') OBJTYPE(*MODULE)
+  CRTSQLRPGI OBJ(IROJAS941/GLIFSOUT) SRCSTMF('/ruta/NOVASRCMOD/GLIFSOUT.rpgle') OBJTYPE(*MODULE)
+
+  CRTSRVPGM SRVPGM(IROJAS941/GLOUTSRV) MODULE(IROJAS941/GLJSONBL
+    IROJAS941/GLIFSOUT)
+    SRCSTMF('/ruta/NOVASRCSRV/GLOUTSRV.bnd') EXPORT(*SRCFILE)
+
+FASE F - PROGRAMA PRINCIPAL (GLCNC001, depende de B, C, D, E)
+--------------------------------------------------------------------
+1. Crear el directorio de enlace GLCNCBND y agregar los 4 programas de
+   servicio (orden = orden de busqueda de simbolos, no es relevante para
+   simbolos sin colision):
+
+     CRTBNDDIR BNDDIR(IROJAS941/GLCNCBND)
+     ADDBNDDIRE BNDDIR(IROJAS941/GLCNCBND) OBJ((IROJAS941/GLUTLSRV *SRVPGM))
+     ADDBNDDIRE BNDDIR(IROJAS941/GLCNCBND) OBJ((IROJAS941/GLDATSRV *SRVPGM))
+     ADDBNDDIRE BNDDIR(IROJAS941/GLCNCBND) OBJ((IROJAS941/GLBUSSRV *SRVPGM))
+     ADDBNDDIRE BNDDIR(IROJAS941/GLCNCBND) OBJ((IROJAS941/GLOUTSRV *SRVPGM))
+
+2. Compilar el programa principal (CTL-OPT ya especifica
+   BNDDIR('GLCNCBND'), no es necesario indicarlo en el CRTSQLRPGI):
+
+     CRTSQLRPGI OBJ(IROJAS941/GLCNC001) SRCSTMF('/ruta/NOVASRCPGM/GLCNC001.sqlrpgle') OBJTYPE(*PGM)
+
+FASE G - PRUEBAS RPGUNIT (TSTSRV, depende de D y E)
+---------------------------------------------------------
+  CRTSQLRPGI OBJ(IROJAS941/TSTBALCA) SRCSTMF('/ruta/UNITSRCMOD/TSTBALCA.rpgle') OBJTYPE(*MODULE)
+  CRTSQLRPGI OBJ(IROJAS941/TSTCONCI) SRCSTMF('/ruta/UNITSRCMOD/TSTCONCI.rpgle') OBJTYPE(*MODULE)
+  CRTSQLRPGI OBJ(IROJAS941/TSTJSONB) SRCSTMF('/ruta/UNITSRCMOD/TSTJSONB.rpgle') OBJTYPE(*MODULE)
+
+  CRTSRVPGM SRVPGM(IROJAS941/TSTSRV) MODULE(IROJAS941/TSTBALCA
+    IROJAS941/TSTCONCI IROJAS941/TSTJSONB)
+    SRCSTMF('/ruta/UNITSRCSRV/TSTSRV.bnd') EXPORT(*SRCFILE)
+    BNDSRVPGM(IROJAS941/GLBUSSRV IROJAS941/GLOUTSRV)
+
+  Nota: los modulos de prueba TSTBALCA/TSTCONCI/TSTJSONB declaran
+  prototipos EXTPROC propios de los procedimientos bajo prueba (GLBALCUL,
+  GLCONCIL.*, GLJSONBL.*); por eso TSTSRV se enlaza directamente con
+  GLBUSSRV y GLOUTSRV (BNDSRVPGM), sin necesidad de GLCNCBND.
+
+  Ejecucion (no requiere framework iRPGUnit externo, ver PRUEBAS.txt):
+    CALL PGM(IROJAS941/TSTSRV) ... (o un programa de prueba que invoque
+    TSTBCRUN/TSTCCRUN/TSTJBRUN y muestre pDetalle y el conteo de fallos)
+
+5. DEPENDENCIA: HASH_SHA256 (GLJSNHASH)
+-------------------------------------------
+GLJSNHASH (modulo GLJSONBL) usa la funcion SQL HASH_SHA256 sobre
+SYSIBM.SYSDUMMY1 para calcular "trazabilidad.hashCuenta". HASH_SHA256
+esta disponible en Db2 for i a partir de cierto nivel de PTF (funciones
+de hashing del grupo de PTF de base de datos). Si el SQLSTT al compilar o
+ejecutar GLJSONBL indica funcion no encontrada (SQL0204 sobre
+HASH_SHA256), verificar el nivel de PTF de Db2 for i del LPAR de PUB400.
+Como mitigacion documentada (sin cambiar la firma de GLJSNHASH ni el
+contrato GLOUTSRV), una alternativa seria sustituir HASH_SHA256 por
+HASH_MD5 o por una concatenacion determinista sin hash; no aplicado en
+este taller porque HASH_SHA256 esta disponible en el LPAR de pruebas.
+
+6. DECISION DE DISENO: nivelCuenta COMO STRING EN EL JSON
+---------------------------------------------------------------
+GLMST.NIVEL_CUENTA se define como VARCHAR(50) (no numerico), porque
+representa el nivel jerarquico de la cuenta dentro del plan de cuentas
+como un codigo/etiqueta (p.ej. "Mayor", "Submayor", "Detalle" o una
+nomenclatura jerarquica con puntos/prefijos), no una cantidad sobre la
+que se realicen operaciones aritmeticas. En consecuencia,
+"cuentaMayor.nivelCuenta" se transporta en el JSON como string (igual que
+codigoBanco/codigoSucursal/cuentaContable, que tambien son
+identificadores con apariencia numerica pero se tratan como codigos), lo
+que evita perdida de ceros a la izquierda y problemas de formato/locale si
+en el futuro el catalogo de niveles cambia de "1"/"2"/"3" a una
+nomenclatura alfanumerica.

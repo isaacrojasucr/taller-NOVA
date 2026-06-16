@@ -1,0 +1,32 @@
+/*==============================================================================
+  Binder Source        : GLUTLSRV
+  Descripcion          : Programa de servicio de utilidades transversales
+                          (fechas, formateo numerico y bitacora de ejecucion)
+                          para el proceso de conciliacion GLBLN.
+  Modulos enlazados    : UTLFECHA, UTLNUM, UTLBITAC
+  Hecho por            : Isaac Rojas
+  Fecha                : 2026-06-13
+  Proyecto             : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================*/
+STRPGMEXP PGMLVL(*CURRENT) SIGNATURE('GLUTLSRV')
+
+  /* UTLFECHA - utilidades de fecha/periodo */
+  EXPORT SYMBOL('UTLFMTFEC')
+  EXPORT SYMBOL('UTLFMTTS')
+  EXPORT SYMBOL('UTLANIO')
+  EXPORT SYMBOL('UTLMES')
+
+  /* UTLNUM - utilidades numericas */
+  EXPORT SYMBOL('UTLRND2')
+  EXPORT SYMBOL('UTLDIFABS')
+  EXPORT SYMBOL('UTLEXCTOL')
+
+  /* UTLBITAC - bitacora de ejecucion en memoria/IFS */
+  EXPORT SYMBOL('UTLBITINI')
+  EXPORT SYMBOL('UTLBITADD')
+  EXPORT SYMBOL('UTLBITCNT')
+  EXPORT SYMBOL('UTLBITGET')
+  EXPORT SYMBOL('UTLBITMAX')
+  EXPORT SYMBOL('UTLBITESC')
+
+ENDPGMEXP

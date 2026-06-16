@@ -1,0 +1,93 @@
+==============================================================================
+Archivo               : PARAMEXE.txt
+Descripcion           : Parametros de ejecucion del programa GLCNC001
+                         (orquestador del proceso de conciliacion GLBLN).
+Hecho por             : Isaac Rojas
+Fecha                 : 2026-06-13
+Proyecto              : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================
+
+GLCNC001 recibe 11 parametros de entrada (todos CONST, sin parametros de
+salida). Invocacion tipica desde CL:
+
+  CALL PGM(IROJAS941/GLCNC001) PARM('001' '01' 'USD' '1000000000'
+    '1999999999' '20260630' 50.00 'IROJAS94' 'PROD'
+    '/home/IROJAS941/conciliacion/GLCNC20260630_001.json'
+    '/home/IROJAS941/conciliacion/GLCNC20260630_001.txt')
+
+#  Parametro    Tipo RPG          Descripcion                                Obligatorio
+-- ------------ ----------------- ------------------------------------------ -----------
+1  pBanco       VARCHAR(20)       Codigo de banco a procesar.                 Si
+                                   Filtra GLBLNVW.codigo_banco. Debe existir
+                                   en GLMST/CCDSC.
+
+2  pSucursal    VARCHAR(20)       Codigo de sucursal a procesar.               Si
+                                   Filtra GLBLNVW.codigo_sucursal.
+
+3  pMoneda      VARCHAR(20)       Codigo de moneda a procesar (ISO o          Si
+                                   codigo interno del catalogo CNOFC).
+                                   Filtra GLBLNVW.codigo_moneda.
+
+4  pCtaIni      VARCHAR(24)       Cuenta contable inicial del rango a          Si
+                                   procesar (inclusive). Filtra
+                                   GLBLNVW.cuenta_contable >= pCtaIni.
+
+5  pCtaFin      VARCHAR(24)       Cuenta contable final del rango a            Si
+                                   procesar (inclusive). Filtra
+                                   GLBLNVW.cuenta_contable <= pCtaFin.
+                                   Debe cumplirse pCtaIni <= pCtaFin.
+
+6  pFchProc     DATE              Fecha de proceso/corte de la conciliacion.   Si
+                                   Se usa para: (a) filtrar movimientos del
+                                   dia en GLMOVTOT/GLMOVTCNT/GLMOVPINI
+                                   (TRANS/TTRAN/TRDSC), (b) derivar
+                                   anio/mes del "contexto" (UTLANIO/UTLMES),
+                                   y (c) como "fechaCorte"/"fechaProceso"
+                                   en el JSON y la bitacora (formato
+                                   AAAA-MM-DD via UTLFMTFEC).
+
+7  pTolerancia  PACKED(18:2)      Monto maximo de diferencia absoluta          Si
+                                   (en la moneda de pMoneda) permitido entre
+                                   el saldo fuente (GLBLN) y el saldo
+                                   conciliado antes de clasificar la cuenta
+                                   como NO_CONCILIADA (RF-03). Valor >= 0.
+                                   Ver ESTADOSC.txt.
+
+8  pUsuario     VARCHAR(10)       Identificador del usuario o proceso que     Si
+                                   solicita la ejecucion (ej. perfil de
+                                   usuario IBM i o nombre de job). Se
+                                   incluye en "ejecucion".usuario del JSON.
+
+9  pAmbiente    VARCHAR(10)       Ambiente de ejecucion (ej. 'DEV', 'QA',      Si
+                                   'PROD'). Se incluye en
+                                   "metadata".ambiente del JSON.
+
+10 pRutaJson    VARCHAR(512)      Ruta IFS completa (incluyendo nombre de     Si
+                                   archivo) donde se publica el documento
+                                   JSON de salida (RF-05/RF-06). El archivo
+                                   se crea/trunca (GLIFSINI) y se escribe en
+                                   modo UTF-8 sin BOM. Debe incluir el
+                                   identificador de ejecucion en el nombre
+                                   para trazabilidad (ver NAMING.txt),
+                                   p.ej. ".../GLCNC<idEjecucion>.json".
+
+11 pRutaBitac   VARCHAR(512)      Ruta IFS completa (incluyendo nombre de     Si
+                                   archivo) donde se publica la bitacora de
+                                   ejecucion en texto plano UTF-8 (RF-07).
+                                   Ver BITACORA.txt para el formato. Se
+                                   recomienda el mismo identificador de
+                                   ejecucion que pRutaJson con extension
+                                   ".txt".
+
+NOTAS
+------
+- Los directorios contenidos en pRutaJson/pRutaBitac deben existir
+  previamente en el IFS; GLIFSINI/UTLBITESC no crean directorios, solo
+  archivos (QSYS2.IFS_WRITE_UTF8 con OVERWRITE => 'REPLACE').
+- GLCNC001 no produce codigo de retorno de error a nivel de programa: el
+  resultado de la ejecucion (exito total/parcial/con errores) se expresa
+  exclusivamente en "ejecucion".estadoEjecucion dentro del JSON y en la
+  linea "estadoEjecucion" de la bitacora (ver ESTADOSC.txt). Esto permite
+  que un error puntual en una cuenta no aborte el batch completo (RF-08).
+- wIdEjec (idEjecucion) se genera internamente a partir de %timestamp() al
+  inicio de la ejecucion y no es un parametro de entrada.

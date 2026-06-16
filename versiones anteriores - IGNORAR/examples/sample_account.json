@@ -1,0 +1,15 @@
+{
+  "metadata": { "generatedAt": "2026-06-12T10:00:00" , "schema": "contabilidad.v1"},
+  "ejecucion": { "fechaProceso": "2026-06-11", "banco": "B001" },
+  "cuentas": [
+    {
+      "banco": "B001",
+      "sucursal": "S01",
+      "moneda": "USD",
+      "cuentaContable": "100-001-0001",
+      "totalDebitos": 1250.50,
+      "totalCreditos": 300.00,
+      "diferenciaNeta": 950.50
+    }
+  ]
+}

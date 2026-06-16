@@ -1,0 +1,2 @@
+system "db2 ""select column_name, data_type from qsys2.syscolumns where table_schema = 'IROJAS941' and table_name = 'GLMST' order by ordinal_position"""
+system "db2 ""select column_name, data_type from qsys2.syscolumns where table_schema = 'IROJAS941' and table_name = 'TRANS' order by ordinal_position"""

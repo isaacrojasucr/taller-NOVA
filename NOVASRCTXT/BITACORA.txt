@@ -1,0 +1,72 @@
+==============================================================================
+Archivo               : BITACORA.txt
+Descripcion           : Formato del archivo de bitacora .txt generado en IFS
+                         por UTLBITESC (RF-07/RNF-05).
+Hecho por             : Isaac Rojas
+Fecha                 : 2026-06-13
+Proyecto              : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================
+
+1. GENERACION
+---------------
+Al finalizar la ejecucion, GLCNC001 invoca:
+
+  UTLBITESC(pRutaBitac: wIdEjec: UTLFMTFEC(pFchProc): UTLFMTTS(wTsIni):
+            UTLFMTTS(wTsFin): wTotCuentas: wEstadoEj);
+
+UTLBITESC crea/trunca el archivo indicado en pRutaBitac (QSYS2.IFS_WRITE_
+UTF8, OVERWRITE => 'REPLACE') y escribe, linea por linea (UTF-8, con fin
+de linea estandar), un encabezado de ejecucion seguido del detalle de
+incidentes acumulados durante la corrida (los mismos incidentes que
+aparecen en "incidentes[]" del JSON, ver ESTADOSC.txt y PRUEBAS.txt).
+
+2. ESTRUCTURA DEL ARCHIVO
+-----------------------------
+
+  Linea 1  : === BITACORA DE EJECUCION GLCNC001 ===
+  Linea 2  : idEjecucion     : <idEjecucion>
+  Linea 3  : fechaProceso    : <AAAA-MM-DD>              (UTLFMTFEC)
+  Linea 4  : fechaHoraInicio : <AAAA-MM-DDTHH:MM:SS>      (UTLFMTTS)
+  Linea 5  : fechaHoraFin    : <AAAA-MM-DDTHH:MM:SS>      (UTLFMTTS)
+  Linea 6  : totalCuentas    : <numero de cuentas procesadas (RF-04)>
+  Linea 7  : estadoEjecucion : <FINALIZADO | PARCIAL | ERROR>
+  Linea 8  : --- INCIDENTES (<N>) ---
+  Linea 9+ : [<SEVERIDAD>] <codigo> - <tipo> - cuenta <cuentaContable>: <mensaje>
+             ... (una linea por cada incidente acumulado, en el orden en
+             que se registraron: por cuenta procesada, y dentro de cada
+             cuenta, primero el incidente de conciliacion (si aplica) o
+             el incidente de error de proceso)
+
+Si <N> = 0 (sin incidentes), la linea 8 se escribe igualmente como
+"--- INCIDENTES (0) ---" y no se agregan lineas de detalle.
+
+3. EJEMPLO
+-----------
+  === BITACORA DE EJECUCION GLCNC001 ===
+  idEjecucion     : GLCNC20260630143025123456
+  fechaProceso    : 2026-06-30
+  fechaHoraInicio : 2026-06-30T14:30:25
+  fechaHoraFin    : 2026-06-30T14:30:27
+  totalCuentas    : 25
+  estadoEjecucion : PARCIAL
+  --- INCIDENTES (2) ---
+  [ALTA] ERR-GL-001 - DIFERENCIA_TOLERANCIA - cuenta 1010203: Cuenta 1010203: Diferencia excede la tolerancia permitida (diferencia neta 250.00).
+  [MEDIA] WARN-GL-001 - PARTIDA_TRANSITO - cuenta 1010205: Cuenta 1010205: Partida en transito dentro de tolerancia.
+
+4. RELACION CON EL JSON DE SALIDA
+-------------------------------------
+- idEjecucion, fechaProceso, fechaHoraInicio/Fin y estadoEjecucion son los
+  mismos valores que aparecen en el objeto "ejecucion" del JSON (RF-05,
+  GLJSNEJEC).
+- totalCuentas corresponde a "controlTotales".totalCuentasProcesadas
+  (GLCONTGET/GLJSNCTOT).
+- Cada linea de incidente corresponde 1:1 a un elemento del arreglo
+  "incidentes" del JSON (GLJSNINC), con el mensaje SIN escapar (la
+  bitacora es texto plano, no JSON).
+
+5. LIMITES
+------------
+UTLBITAC acumula hasta MAXINCID=500 incidentes por ejecucion
+(dcl-c MAXINCID en UTLBITAC.rpgle); incidentes adicionales se descartan
+silenciosamente (no afectan estadoEjecucion si ya se registro un
+incidente de severidad equivalente o mayor antes del limite).

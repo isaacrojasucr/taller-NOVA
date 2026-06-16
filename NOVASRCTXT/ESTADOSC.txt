@@ -1,0 +1,110 @@
+==============================================================================
+Archivo               : ESTADOSC.txt
+Descripcion           : Estados de conciliacion por cuenta, severidades,
+                         regla de tolerancia y derivacion del estado final
+                         de la ejecucion (RF-03/RF-04/RF-08).
+Hecho por             : Isaac Rojas
+Fecha                 : 2026-06-13
+Proyecto              : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================
+
+1. CALCULO PREVIO (GLCONDIF)
+--------------------------------
+Para cada cuenta, despues de calcular saldoFinalCalculado (GLBALCUL) y
+recorrer las partidas conciliatorias pendientes (GLCONPART, que acumulan
+g_difNeta segun su signo D/+ o C/-):
+
+  saldoFinalConciliado = saldoFinalCalculado + g_difNeta
+  diferenciaNeta       = saldoFinalFuente - saldoFinalConciliado
+  diferenciaAbsoluta   = ABS(diferenciaNeta)            (UTLDIFABS)
+  excedeTolerancia     = diferenciaAbsoluta > pTolerancia (UTLEXCTOL)
+
+donde saldoFinalFuente es el saldo de GLBLN (wSaldoAct) y pTolerancia es
+el parametro 7 de GLCNC001 (ver PARAMEXE.txt).
+
+2. ESTADOS DE CONCILIACION POR CUENTA (codigo)
+---------------------------------------------------
+
+  CONCILIADA
+    Condicion : g_partSeq = 0 (sin partidas pendientes) y
+                diferenciaNeta = 0.
+    descripcion        : "Conciliada sin partidas pendientes"
+    severidad          : BAJA
+    requiereRevision   : false
+    motivoPrincipal    : "Sin diferencias detectadas"
+    Incidente generado : ninguno.
+
+  PARCIAL
+    Condicion : NO se cumple CONCILIADA, y NO excedeTolerancia
+                (es decir, hay partidas pendientes y/o diferencia neta
+                distinta de cero, pero la diferencia absoluta esta
+                dentro de la tolerancia permitida).
+    descripcion        : "Conciliada con partidas pendientes"
+    severidad          : MEDIA
+    requiereRevision   : true
+    motivoPrincipal    : "Partida en transito dentro de tolerancia"
+    Incidente generado : codigo=WARN-GL-001, tipo=PARTIDA_TRANSITO,
+                          severidad=MEDIA (UTLBITADD + GLJSNINC)
+
+  NO_CONCILIADA
+    Condicion : excedeTolerancia = true (diferenciaAbsoluta >
+                pTolerancia), independientemente de g_partSeq.
+    descripcion        : "Diferencia fuera de tolerancia, requiere revision"
+    severidad          : ALTA
+    requiereRevision   : true
+    motivoPrincipal    : "Diferencia excede la tolerancia permitida"
+    Incidente generado : codigo=ERR-GL-001, tipo=DIFERENCIA_TOLERANCIA,
+                          severidad=ALTA (UTLBITADD + GLJSNINC), mensaje
+                          incluye cuenta, motivo y diferenciaNeta.
+
+3. INCIDENTES POR ERROR DE PROCESO (RF-08)
+-----------------------------------------------
+Si el procesamiento de una cuenta individual (pasos GLMOVTOT..GLJSNCTA en
+GLCNC001) lanza un error (capturado por MONITOR/ON-ERROR), la cuenta NO
+se agrega a "cuentas[]" ni a controlTotales, pero SI se registra un
+incidente y el proceso continua con la siguiente cuenta:
+
+  codigo     : ERR-GL-999
+  tipo       : ERROR_PROCESO
+  severidad  : CRITICA
+  mensaje    : "Error procesando cuenta <cuentaContable> (SQLSTT=<sqlstt>)."
+
+4. SEVERIDADES (orden de prioridad, UTLBITMAX)
+---------------------------------------------------
+  CRITICA > ALTA > MEDIA > BAJA
+
+UTLBITMAX() recorre todos los incidentes acumulados en la ejecucion y
+devuelve la severidad mas alta presente (o cadena vacia si no hay
+incidentes). Esta jerarquia determina el estadoEjecucion (punto 5).
+
+5. ESTADO DE LA EJECUCION ("ejecucion".estadoEjecucion)
+-------------------------------------------------------------
+
+  UTLBITMAX()            ->  estadoEjecucion
+  ----------------------------------------------
+  'CRITICA'               ->  ERROR
+  'ALTA'                  ->  PARCIAL
+  'MEDIA' / 'BAJA' / ''   ->  FINALIZADO
+
+Interpretacion:
+  - FINALIZADO : todas las cuentas se procesaron sin incidentes ALTA/
+                 CRITICA. Puede haber incidentes MEDIA (cuentas en
+                 estado PARCIAL), que son informativos.
+  - PARCIAL    : al menos una cuenta quedo NO_CONCILIADA (severidad
+                 ALTA), pero ninguna cuenta tuvo error de proceso. El
+                 JSON y la bitacora contienen el detalle completo de las
+                 cuentas afectadas para revision manual.
+  - ERROR      : al menos una cuenta no pudo procesarse (severidad
+                 CRITICA, codigo ERR-GL-999). El resto de las cuentas SI
+                 se procesaron y aparecen en "cuentas[]"; la(s) cuenta(s)
+                 con error aparecen unicamente en "incidentes[]" y en la
+                 bitacora.
+
+6. RESUMEN DE LA TABLA DE DECISION (GLCONDIF)
+---------------------------------------------------
+
+  g_partSeq=0 y difNeta=0  | excedeTolerancia | codigo         | severidad
+  -------------------------+------------------+----------------+-----------
+  true                     | (no evaluado)    | CONCILIADA     | BAJA
+  false                    | false            | PARCIAL        | MEDIA
+  false                    | true             | NO_CONCILIADA  | ALTA

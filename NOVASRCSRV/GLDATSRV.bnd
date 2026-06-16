@@ -1,0 +1,26 @@
+/*==============================================================================
+  Binder Source        : GLDATSRV
+  Descripcion          : Programa de servicio de acceso a datos (cuentas
+                          mayores GLBLNVW y movimientos TRANS/TTRAN/TRDSC)
+                          para el proceso de conciliacion GLBLN.
+  Modulos enlazados    : GLDTAACC, GLMOVACC
+  Hecho por            : Isaac Rojas
+  Fecha                : 2026-06-13
+  Proyecto             : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
+==============================================================================*/
+STRPGMEXP PGMLVL(*CURRENT) SIGNATURE('GLDATSRV')
+
+  /* GLDTAACC - acceso a cuentas mayores (GLBLNVW) */
+  EXPORT SYMBOL('GLACCINI')
+  EXPORT SYMBOL('GLACCNEXT')
+  EXPORT SYMBOL('GLACCFIN')
+
+  /* GLMOVACC - acceso a movimientos (TRANS/TTRAN/TRDSC) */
+  EXPORT SYMBOL('GLMOVTOT')
+  EXPORT SYMBOL('GLMOVDTOT')
+  EXPORT SYMBOL('GLMOVTCNT')
+  EXPORT SYMBOL('GLMOVPINI')
+  EXPORT SYMBOL('GLMOVPNXT')
+  EXPORT SYMBOL('GLMOVPFIN')
+
+ENDPGMEXP
