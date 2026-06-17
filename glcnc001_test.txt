@@ -1,0 +1,12 @@
+=== BITACORA DE EJECUCION GLCNC001 ===
+idEjecucion     : GLCNC20260617083543550147
+fechaProceso    : 2026-06-30
+fechaHoraInicio : 2026-06-17T08:35:43
+fechaHoraFin    : 2026-06-17T08:35:45
+totalCuentas    : 8
+estadoEjecucion : PARCIAL
+--- INCIDENTES (4) ---
+[MEDIA] WARN-GL-001 - PARTIDA_TRANSITO - cuenta 1000000004: Cuenta 1000000004: Partida en transito dentro de tolerancia.
+[MEDIA] WARN-GL-001 - PARTIDA_TRANSITO - cuenta 1000000005: Cuenta 1000000005: Partida en transito dentro de tolerancia.
+[ALTA] ERR-GL-001 - DIFERENCIA_TOLERANCI - cuenta 1000000006: Cuenta 1000000006: Diferencia excede la tolerancia permitida (diferencia neta -100.00).
+[MEDIA] WARN-GL-001 - PARTIDA_TRANSITO - cuenta 1000000008: Cuenta 1000000008: Partida en transito dentro de tolerancia.

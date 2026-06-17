@@ -17,7 +17,7 @@
 // Fecha                : 2026-06-13
 // Proyecto             : Taller IBM i - Conciliacion GLBLN (IROJAS941 / PUB400)
 //==============================================================================
-ctl-opt dftactgrp(*no) actgrp(*new) bnddir('GLCNCBND');
+ctl-opt dftactgrp(*no) actgrp(*caller) bnddir('GLCNCBND');
 
 //------------------------------------------------------------------
 // Prototipos de procedimientos externos (GLUTLSRV / GLDATSRV /

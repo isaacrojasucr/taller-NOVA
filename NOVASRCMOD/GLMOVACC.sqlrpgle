@@ -7,6 +7,12 @@
 //                         de proceso, para soportar el calculo de balance
 //                         (RF-02) y la deteccion de partidas conciliatorias
 //                         (RF-03).
+//
+//                         Patron restart-key para PCURSOR: cada llamada a
+//                         GLMOVPNXT abre, lee UNA fila y cierra su propio
+//                         cursor. Mismo motivo que GLDTAACC: cursor state
+//                         no se preserva entre procedimientos distintos en
+//                         modules de service program con CLOSQLCSR(*ENDMOD).
 // Service Program      : GLDATSRV
 // Hecho por            : Isaac Rojas
 // Fecha                : 2026-06-13
@@ -15,6 +21,14 @@
 ctl-opt nomain;
 
 exec sql SET OPTION COMMIT=*NONE, CLOSQLCSR=*ENDMOD;
+
+// Variables de modulo para los filtros de PCURSOR y clave de reinicio.
+dcl-s wPCBanco    varchar(20);
+dcl-s wPCSucursal varchar(20);
+dcl-s wPCMoneda   varchar(20);
+dcl-s wPCCtaCont  varchar(24);
+dcl-s wPCFecha    date;
+dcl-s wPCLastNRR  varchar(30); // ultimo NUMERO_REGISTRO_RELATIVO devuelto; '' = inicio
 
 //------------------------------------------------------------------
 // GLMOVTOT: Totales de movimientos historicos (TRANS) de una cuenta
@@ -147,8 +161,8 @@ dcl-proc GLMOVTCNT export;
 end-proc;
 
 //------------------------------------------------------------------
-// GLMOVPINI: Abre el cursor de partidas conciliatorias (TTRAN del dia
-//            de una cuenta, con su descripcion en TRDSC si existe).
+// GLMOVPINI: Guarda los filtros en variables de modulo y resetea la
+//            clave de reinicio para la proxima iteracion con GLMOVPNXT.
 //------------------------------------------------------------------
 dcl-proc GLMOVPINI export;
   dcl-pi *n;
@@ -159,34 +173,19 @@ dcl-proc GLMOVPINI export;
     pFecha    date const;
   end-pi;
 
-  exec sql
-    DECLARE PCURSOR CURSOR FOR
-      SELECT T.NUMERO_REGISTRO_RELATIVO, T.TIPO_MOVIMIENTO, T.DEBITO_CREDITO,
-             T.MONTO, T.FECHA_VALOR, T.REFERENCIA_EXTERNA, T.ESTADO_TRANSACCION,
-             D.TIPO_DESCRIPCION, D.TEXTO_DESCRIPCION
-        FROM IROJAS941.TTRAN T
-        LEFT JOIN IROJAS941.TRDSC D
-          ON D.NUMERO_REGISTRO_RELATIVO = T.NUMERO_REGISTRO_RELATIVO
-         AND D.SECUENCIA = (
-               SELECT MIN(D2.SECUENCIA)
-                 FROM IROJAS941.TRDSC D2
-                 WHERE D2.NUMERO_REGISTRO_RELATIVO = T.NUMERO_REGISTRO_RELATIVO
-             )
-        WHERE T.CODIGO_BANCO = :pBanco
-          AND T.CODIGO_SUCURSAL = :pSucursal
-          AND T.CODIGO_MONEDA = :pMoneda
-          AND T.CUENTA_CONTABLE = :pCtaCont
-          AND T.FECHA = :pFecha
-          AND T.ESTADO_REGISTRO = 'A'
-        ORDER BY T.NUMERO_REGISTRO_RELATIVO;
-
-  exec sql OPEN PCURSOR;
+  wPCBanco    = pBanco;
+  wPCSucursal = pSucursal;
+  wPCMoneda   = pMoneda;
+  wPCCtaCont  = pCtaCont;
+  wPCFecha    = pFecha;
+  wPCLastNRR  = '';
 end-proc;
 
 //------------------------------------------------------------------
-// GLMOVPNXT: Recupera la siguiente partida conciliatoria del cursor
-//            abierto por GLMOVPINI. Devuelve *off cuando no hay mas
-//            filas.
+// GLMOVPNXT: Recupera la siguiente partida conciliatoria usando
+//            restart-key. Abre, lee UNA fila de TTRAN con NRR mayor
+//            que el ultimo visto y cierra el cursor en la misma
+//            llamada. Devuelve *off al agotar el resultado.
 //------------------------------------------------------------------
 dcl-proc GLMOVPNXT export;
   dcl-pi *n ind;
@@ -203,15 +202,50 @@ dcl-proc GLMOVPNXT export;
 
   dcl-s wTipoDescInd int(5);
   dcl-s wTextoInd    int(5);
+  dcl-s wFetchStt    char(5);
+
+  // PCURSOR local a este procedimiento: OPEN+FETCH+CLOSE en cada llamada.
+  // T.NUMERO_REGISTRO_RELATIVO > :wPCLastNRR pagina al siguiente registro.
+  // Con wPCLastNRR='' (primera llamada) retorna el primer NRR no vacio.
+  exec sql
+    DECLARE PCURSOR CURSOR FOR
+      SELECT T.NUMERO_REGISTRO_RELATIVO, T.TIPO_MOVIMIENTO, T.DEBITO_CREDITO,
+             T.MONTO, T.FECHA_VALOR, T.REFERENCIA_EXTERNA, T.ESTADO_TRANSACCION,
+             D.TIPO_DESCRIPCION, D.TEXTO_DESCRIPCION
+        FROM IROJAS941.TTRAN T
+        LEFT JOIN IROJAS941.TRDSC D
+          ON D.NUMERO_REGISTRO_RELATIVO = T.NUMERO_REGISTRO_RELATIVO
+         AND D.SECUENCIA = (
+               SELECT MIN(D2.SECUENCIA)
+                 FROM IROJAS941.TRDSC D2
+                 WHERE D2.NUMERO_REGISTRO_RELATIVO = T.NUMERO_REGISTRO_RELATIVO
+             )
+        WHERE T.CODIGO_BANCO    = :wPCBanco
+          AND T.CODIGO_SUCURSAL = :wPCSucursal
+          AND T.CODIGO_MONEDA   = :wPCMoneda
+          AND T.CUENTA_CONTABLE = :wPCCtaCont
+          AND T.FECHA           = :wPCFecha
+          AND T.ESTADO_REGISTRO = 'A'
+          AND T.NUMERO_REGISTRO_RELATIVO > :wPCLastNRR
+        ORDER BY T.NUMERO_REGISTRO_RELATIVO
+        FETCH FIRST 1 ROW ONLY;
+
+  exec sql OPEN PCURSOR;
 
   exec sql
     FETCH NEXT FROM PCURSOR
       INTO :pNumReg, :pTipoMov, :pDbCr, :pMonto, :pFchVal, :pRefExt, :pEstado,
            :pTipoDesc :wTipoDescInd, :pTexto :wTextoInd;
 
-  if SQLSTT = '02000';
+  wFetchStt = SQLSTT;
+  exec sql CLOSE PCURSOR;
+
+  if wFetchStt <> '00000' and wFetchStt <> '01000';
     return *off;
   endif;
+
+  // Avanza la clave de reinicio para la proxima llamada
+  wPCLastNRR = pNumReg;
 
   if wTipoDescInd < 0;
     pTipoDesc = '';
@@ -224,11 +258,8 @@ dcl-proc GLMOVPNXT export;
 end-proc;
 
 //------------------------------------------------------------------
-// GLMOVPFIN: Cierra el cursor de partidas conciliatorias abierto por
-//            GLMOVPINI.
+// GLMOVPFIN: Sin operacion — el cursor se cierra dentro de GLMOVPNXT.
 //------------------------------------------------------------------
 dcl-proc GLMOVPFIN export;
   dcl-pi *n end-pi;
-
-  exec sql CLOSE PCURSOR;
 end-proc;

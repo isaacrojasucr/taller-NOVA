@@ -162,3 +162,41 @@ Tras cada ejecucion de GLCNC001, conservar como evidencia:
   - El archivo de bitacora publicado en pRutaBitac (BITACORA.txt).
   - El resultado (wFallos, wDet1/wDet2/wDet3) de la corrida de TSTSRV
     correspondiente a la version del codigo desplegada.
+
+--- EJECUCION DE VALIDACION FINAL (2026-06-17) ---
+
+Pruebas unitarias (TSTDRV / TSTSRV):
+  Ruta resultado : /home/IROJAS94/conciliacion/tstdrv_resultado.txt
+  wFallos        : 0
+  Casos OK (11/11):
+    TSTBC01 OK: saldoInicial=800, saldoFinalCalculado=1000
+    TSTBC02 OK: sin movimientos, saldoInicial=saldoFinalCalculado=saldoFuente
+    TSTBC03 OK: creditos>debitos, saldoInicial=1350, saldoFinalCalculado=1000
+    TSTCC01 OK: sin partidas y sin diferencia -> CONCILIADA
+    TSTCC02 OK: partida debito en transito dentro de tolerancia -> PARCIAL
+    TSTCC03 OK: diferencia 200 > tolerancia 50 -> NO_CONCILIADA
+    TSTCC04 OK: control de totales (2 cuentas, 1 conciliada, 1 con diferencia)
+    TSTJB01 OK: metadata incluye ambiente y versionEstructura
+    TSTJB02 OK: contexto incluye periodo anio/mes anidado
+    TSTJB03 OK: incidente escapa comillas dobles en mensaje
+    TSTJB04 OK: cuenta refleja excedeTolerancia=true y requiereRevision=false
+    TSTJB05 OK: GLJSNCCNT=2 y GLJSNCGET(3) vacio fuera de rango
+
+Ejecucion de GLCNC001 (via GLCNCRUN):
+  Parametros     : banco=001, sucursal=01, moneda=USD,
+                   cuentas 1000000001..1000000008, fecha=2026-06-30,
+                   tolerancia=50.00, usuario=IROJAS94, ambiente=QA
+  JSON           : /home/IROJAS94/conciliacion/glcnc001_test.json
+  Bitacora       : /home/IROJAS94/conciliacion/glcnc001_test.txt
+  idEjecucion    : GLCNC20260617083543550147
+  estadoEjecucion: PARCIAL
+  Cuentas proc.  : 8 (4 CONCILIADA, 3 PARCIAL, 1 NO_CONCILIADA)
+  controlTotales :
+    totalCuentasProcesadas   = 8
+    totalCuentasConciliadas  = 4
+    totalCuentasConDiferencia= 4
+    sumatoriaSaldoFinalFuente     = 690000.00
+    sumatoriaSaldoFinalConciliado = 690110.00
+    sumatoriaDiferenciaNeta       = -110.00
+  Incidentes     : 4 (3 MEDIA, 1 ALTA)
+  Validacion seccion 6: TODOS LOS ITEMS APROBADOS
